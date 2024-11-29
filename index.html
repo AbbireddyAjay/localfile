@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Search</title>
+    <style>
+        .search-container {
+            margin-top: 50px;
+            text-align: center;
+        }
+        .search-bar {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .dropdown-content a {
+            padding: 8px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {background-color: #ddd;}
+        .dropdown:hover .dropdown-content {display: block;}
+    </style>
+</head>
+<body>
+
+<div class="search-container">
+    <!-- Search Bar with Location -->
+    <input type="text" id="location-input" class="search-bar" placeholder="Enter Location" readonly>
+    
+    <!-- Dropdown for selecting or filling current location -->
+    <div class="dropdown">
+        <button class="dropbtn">Select Location</button>
+        <div class="dropdown-content">
+            <a href="#" id="current-location-btn">Current Location</a>
+            <a href="#">Other Location 1</a>
+            <a href="#">Other Location 2</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Function to get the current location
+    function getCurrentLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    // Success callback for geolocation
+    function showPosition(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        // Using Google Geocoding API to get the address based on lat and lon
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=K_VxE-kQ83G3Uz05Y6QbShGyvD_-JLgL84uAjEk1H_c`;
+
+        fetch(geocodeUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "OK") {
+                    const address = data.results[0].formatted_address;
+                    document.getElementById("location-input").value = address;
+
+                    // Optionally, you can perform additional actions based on the location (like redirecting, etc.)
+                    console.log("Current Location Address: " + address);
+                } else {
+                    alert("Could not fetch address. Please try again.");
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching geocode data:", error);
+                alert("Error occurred while fetching your location.");
+            });
+    }
+
+    // Error callback for geolocation
+    function showError(error) {
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                alert("User denied the request for Geolocation.");
+                break;
+            case error.POSITION_UNAVAILABLE:
+                alert("Location information is unavailable.");
+                break;
+            case error.TIMEOUT:
+                alert("The request to get user location timed out.");
+                break;
+            case error.UNKNOWN_ERROR:
+                alert("An unknown error occurred.");
+                break;
+        }
+    }
+
+    // Event listener for the "Current Location" button in the dropdown
+    document.getElementById("current-location-btn").addEventListener("click", function(event) {
+        event.preventDefault(); // Prevent the default behavior of the link
+        getCurrentLocation(); // Trigger the geolocation process
+    });
+</script>
+
+</body>
+</html>

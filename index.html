@@ -2,119 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location Search</title>
-    <style>
-        .search-container {
-            margin-top: 50px;
-            text-align: center;
-        }
-        .search-bar {
-            width: 300px;
-            padding: 10px;
-            font-size: 16px;
-        }
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 160px;
-            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-            z-index: 1;
-            border: 1px solid #ddd;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        .dropdown-content a {
-            padding: 8px 16px;
-            text-decoration: none;
-            display: block;
-        }
-        .dropdown-content a:hover {background-color: #ddd;}
-        .dropdown:hover .dropdown-content {display: block;}
-    </style>
+    <title>Get Location Address</title>
 </head>
-<body>
+<body data-rsssl=1>
 
-<div class="search-container">
-    <!-- Search Bar with Location -->
-    <input type="text" id="location-input" class="search-bar" placeholder="Enter Location" readonly>
-    
-    <!-- Dropdown for selecting or filling current location -->
-    <div class="dropdown">
-        <button class="dropbtn">Select Location</button>
-        <div class="dropdown-content">
-            <a href="#" id="current-location-btn">Current Location</a>
-            <a href="#">Other Location 1</a>
-            <a href="#">Other Location 2</a>
-        </div>
-    </div>
-</div>
+<div id="output"></div>
 
 <script>
-    // Function to get the current location
-    function getCurrentLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(showPosition, showError);
-        } else {
-            alert("Geolocation is not supported by this browser.");
-        }
+// Google Maps Geocoding API key (replace with your actual API key)
+const API_KEY = "YOUR_GOOGLE_API_KEY";  // Make sure to replace with your actual API Key
+
+// Set options for geolocation
+const options = {
+    enableHighAccuracy: true,  // Get high accuracy reading, if available (default false)
+    timeout: 5000,  // Time to return a position successfully before error (default infinity)
+    maximumAge: 0,  // Force the request to get a fresh location (default 0 means cache for any age)
+};
+
+// Get the user's location
+navigator.geolocation.watchPosition(success, error, options);
+
+// Function that is triggered on success
+function success(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const accuracy = pos.coords.accuracy; // Accuracy in meters
+
+    // Show the coordinates and accuracy
+    document.getElementById('output').innerHTML = `
+        User coordinates: <br>
+        Latitude: ${lat} <br>
+        Longitude: ${lng} <br>
+        Estimation accurate within: ${Math.round(accuracy)} meters.<br><br>
+        Address: <span id="address">Fetching address...</span>
+    `;
+
+    // Now fetch the address using the Geocoding API
+    getAddressFromCoordinates(lat, lng);
+}
+
+// Function to handle errors (if the location cannot be fetched)
+function error(err) {
+    if (err.code === 1) {
+        alert("Please allow geolocation access.");
+    } else {
+        alert("Cannot get current location.");
     }
+}
 
-    // Success callback for geolocation
-    function showPosition(position) {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
+// Function to fetch address from Google Maps Geocoding API using latitude and longitude
+function getAddressFromCoordinates(lat, lng) {
+    // Construct the Geocoding API URL
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${API_KEY}`;
+    
+    // Fetch the address using the Geocoding API
+    fetch(geocodeUrl)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);  // Debugging: log the full API response
 
-        // Using Google Geocoding API to get the address based on lat and lon
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=K_VxE-kQ83G3Uz05Y6QbShGyvD_-JLgL84uAjEk1H_c`;
-
-        fetch(geocodeUrl)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "OK") {
-                    const address = data.results[0].formatted_address;
-                    document.getElementById("location-input").value = address;
-
-                    // Optionally, you can perform additional actions based on the location (like redirecting, etc.)
-                    console.log("Current Location Address: " + address);
-                } else {
-                    alert("Could not fetch address. Please try again.");
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching geocode data:", error);
-                alert("Error occurred while fetching your location.");
-            });
-    }
-
-    // Error callback for geolocation
-    function showError(error) {
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                alert("User denied the request for Geolocation.");
-                break;
-            case error.POSITION_UNAVAILABLE:
-                alert("Location information is unavailable.");
-                break;
-            case error.TIMEOUT:
-                alert("The request to get user location timed out.");
-                break;
-            case error.UNKNOWN_ERROR:
-                alert("An unknown error occurred.");
-                break;
-        }
-    }
-
-    // Event listener for the "Current Location" button in the dropdown
-    document.getElementById("current-location-btn").addEventListener("click", function(event) {
-        event.preventDefault(); // Prevent the default behavior of the link
-        getCurrentLocation(); // Trigger the geolocation process
-    });
+            // Check the status of the API response
+            if (data.status === "OK") {
+                const address = data.results[0].formatted_address;
+                document.getElementById('address').innerText = address;
+            } else if (data.status === "ZERO_RESULTS") {
+                document.getElementById('address').innerText = "No address found for these coordinates.";
+            } else {
+                document.getElementById('address').innerText = `Error fetching address: ${data.status}`;
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching address:", error);
+            document.getElementById('address').innerText = "Error fetching address";
+        });
+}
 </script>
 
 </body>
